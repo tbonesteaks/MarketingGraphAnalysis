@@ -1,0 +1,576 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 1024px;
+                 height: 768px;
+                 background-color: #5d0185;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="design">design</option>
+                                
+                                    <option value="shape">shape</option>
+                                
+                                    <option value="surface">surface</option>
+                                
+                                    <option value="mean">mean</option>
+                                
+                                    <option value="combination">combination</option>
+                                
+                                    <option value="trade">trade</option>
+                                
+                                    <option value="patent">patent</option>
+                                
+                                    <option value="pant">pant</option>
+                                
+                                    <option value="dress">dress</option>
+                                
+                                    <option value="[">[</option>
+                                
+                                    <option value="week">week</option>
+                                
+                                    <option value="😂">😂</option>
+                                
+                                    <option value="rotate">rotate</option>
+                                
+                                    <option value="please">please</option>
+                                
+                                    <option value="judge">judge</option>
+                                
+                                    <option value="bring">bring</option>
+                                
+                                    <option value="wardrobe">wardrobe</option>
+                                
+                                    <option value="winter">winter</option>
+                                
+                                    <option value="paralympic">paralympic</option>
+                                
+                                    <option value="olympic">olympic</option>
+                                
+                                    <option value="deal">deal</option>
+                                
+                                    <option value="go">go</option>
+                                
+                                    <option value="someone">someone</option>
+                                
+                                    <option value="check">check</option>
+                                
+                                    <option value="dm">dm</option>
+                                
+                                    <option value="addition">addition</option>
+                                
+                                    <option value="@lululemon">@lululemon</option>
+                                
+                                    <option value="kit">kit</option>
+                                
+                                    <option value="…">…</option>
+                                
+                                    <option value="#athleisure">#athleisure</option>
+                                
+                                    <option value="@mahoney_sarah">@mahoney_sarah</option>
+                                
+                                    <option value="’">’</option>
+                                
+                                    <option value="wear">wear</option>
+                                
+                                    <option value="sweat">sweat</option>
+                                
+                                    <option value="suit">suit</option>
+                                
+                                    <option value="operate">operate</option>
+                                
+                                    <option value="helpful">helpful</option>
+                                
+                                    <option value="@johnvarvatos">@johnvarvatos</option>
+                                
+                                    <option value="unpack">unpack</option>
+                                
+                                    <option value="thing">thing</option>
+                                
+                                    <option value="store">store</option>
+                                
+                                    <option value="software">software</option>
+                                
+                                    <option value="example">example</option>
+                                
+                                    <option value="change">change</option>
+                                
+                                    <option value="center">center</option>
+                                
+                                    <option value="business">business</option>
+                                
+                                    <option value="#cfo">#cfo</option>
+                                
+                                    <option value="response">response</option>
+                                
+                                    <option value="sad">sad</option>
+                                
+                                    <option value="repack">repack</option>
+                                
+                                    <option value="reevaluate">reevaluate</option>
+                                
+                                    <option value="mask">mask</option>
+                                
+                                    <option value="pocket">pocket</option>
+                                
+                                    <option value="h">h</option>
+                                
+                                    <option value="lululemon">lululemon</option>
+                                
+                                    <option value="laundry">laundry</option>
+                                
+                                    <option value="home">home</option>
+                                
+                                    <option value="hold">hold</option>
+                                
+                                    <option value="get">get</option>
+                                
+                                    <option value="feud">feud</option>
+                                
+                                    <option value="copycat">copycat</option>
+                                
+                                    <option value="discount">discount</option>
+                                
+                                    <option value="budget">budget</option>
+                                
+                                    <option value="zero">zero</option>
+                                
+                                    <option value="bag">bag</option>
+                                
+                                    <option value="athleta">athleta</option>
+                                
+                                    <option value="@tesla">@tesla</option>
+                                
+                                    <option value="@jonmcneill">@jonmcneill</option>
+                                
+                                    <option value="@jefftomaneng">@jefftomaneng</option>
+                                
+                                    <option value="@gridspace">@gridspace</option>
+                                
+                                    <option value="@ewoodhouse7">@ewoodhouse7</option>
+                                
+                                    <option value="🍁">🍁</option>
+                                
+                                    <option value="feedback">feedback</option>
+                                
+                                    <option value="yo">yo</option>
+                                
+                                    <option value="think">think</option>
+                                
+                                    <option value="temp">temp</option>
+                                
+                                    <option value="research">research</option>
+                                
+                                    <option value="drop">drop</option>
+                                
+                                    <option value="customer">customer</option>
+                                
+                                    <option value="advise">advise</option>
+                                
+                                    <option value="yesterday">yesterday</option>
+                                
+                                    <option value="worth">worth</option>
+                                
+                                    <option value="life">life</option>
+                                
+                                    <option value="year">year</option>
+                                
+                                    <option value="stuff">stuff</option>
+                                
+                                    <option value="pandemic">pandemic</option>
+                                
+                                    <option value="iq">iq</option>
+                                
+                                    <option value="yeah">yeah</option>
+                                
+                                    <option value="😎">😎</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": "design", "label": "design", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "shape", "label": "shape", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "surface", "label": "surface", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "mean", "label": "mean", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "combination", "label": "combination", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "trade", "label": "trade", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "patent", "label": "patent", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "pant", "label": "pant", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "dress", "label": "dress", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "[", "label": "[", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "week", "label": "week", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "\ud83d\ude02", "label": "\ud83d\ude02", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "rotate", "label": "rotate", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "please", "label": "please", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "judge", "label": "judge", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "bring", "label": "bring", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "wardrobe", "label": "wardrobe", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "winter", "label": "winter", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "paralympic", "label": "paralympic", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "olympic", "label": "olympic", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "deal", "label": "deal", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "go", "label": "go", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "someone", "label": "someone", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "check", "label": "check", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "dm", "label": "dm", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "addition", "label": "addition", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@lululemon", "label": "@lululemon", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "kit", "label": "kit", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "\u2026", "label": "\u2026", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "#athleisure", "label": "#athleisure", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@mahoney_sarah", "label": "@mahoney_sarah", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "\u2019", "label": "\u2019", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "wear", "label": "wear", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "sweat", "label": "sweat", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "suit", "label": "suit", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "operate", "label": "operate", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "helpful", "label": "helpful", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@johnvarvatos", "label": "@johnvarvatos", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "unpack", "label": "unpack", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "thing", "label": "thing", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "store", "label": "store", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "software", "label": "software", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "example", "label": "example", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "change", "label": "change", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "center", "label": "center", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "business", "label": "business", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "#cfo", "label": "#cfo", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "response", "label": "response", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "sad", "label": "sad", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "repack", "label": "repack", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "reevaluate", "label": "reevaluate", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "mask", "label": "mask", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "pocket", "label": "pocket", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "h", "label": "h", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "lululemon", "label": "lululemon", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "laundry", "label": "laundry", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "home", "label": "home", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "hold", "label": "hold", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "get", "label": "get", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "feud", "label": "feud", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "copycat", "label": "copycat", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "discount", "label": "discount", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "budget", "label": "budget", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "zero", "label": "zero", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "bag", "label": "bag", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "athleta", "label": "athleta", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@tesla", "label": "@tesla", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@jonmcneill", "label": "@jonmcneill", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@jefftomaneng", "label": "@jefftomaneng", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@gridspace", "label": "@gridspace", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@ewoodhouse7", "label": "@ewoodhouse7", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "\ud83c\udf41", "label": "\ud83c\udf41", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "feedback", "label": "feedback", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "yo", "label": "yo", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "think", "label": "think", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "temp", "label": "temp", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "research", "label": "research", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "drop", "label": "drop", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "customer", "label": "customer", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "advise", "label": "advise", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "yesterday", "label": "yesterday", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "worth", "label": "worth", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "life", "label": "life", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "year", "label": "year", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "stuff", "label": "stuff", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "pandemic", "label": "pandemic", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "iq", "label": "iq", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "yeah", "label": "yeah", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "\ud83d\ude0e", "label": "\ud83d\ude0e", "shape": "dot", "size": 40}]);
+                  edges = new vis.DataSet([{"arrows": "to", "from": "design", "to": "shape", "width": 2}, {"arrows": "to", "from": "design", "to": "shape", "width": 2}, {"arrows": "to", "from": "design", "to": "shape", "width": 2}, {"arrows": "to", "from": "design", "to": "shape", "width": 2}, {"arrows": "to", "from": "design", "to": "shape", "width": 2}, {"arrows": "to", "from": "design", "to": "shape", "width": 2}, {"arrows": "to", "from": "design", "to": "surface", "width": 2}, {"arrows": "to", "from": "design", "to": "surface", "width": 2}, {"arrows": "to", "from": "design", "to": "surface", "width": 2}, {"arrows": "to", "from": "design", "to": "mean", "width": 2}, {"arrows": "to", "from": "design", "to": "mean", "width": 2}, {"arrows": "to", "from": "design", "to": "mean", "width": 2}, {"arrows": "to", "from": "design", "to": "design", "width": 2}, {"arrows": "to", "from": "design", "to": "design", "width": 2}, {"arrows": "to", "from": "design", "to": "design", "width": 2}, {"arrows": "to", "from": "design", "to": "combination", "width": 2}, {"arrows": "to", "from": "design", "to": "combination", "width": 2}, {"arrows": "to", "from": "design", "to": "combination", "width": 2}, {"arrows": "to", "from": "design", "to": "trade", "width": 2}, {"arrows": "to", "from": "design", "to": "trade", "width": 2}, {"arrows": "to", "from": "design", "to": "patent", "width": 2}, {"arrows": "to", "from": "design", "to": "patent", "width": 2}, {"arrows": "to", "from": "design", "to": "pant", "width": 2}, {"arrows": "to", "from": "design", "to": "pant", "width": 2}, {"arrows": "to", "from": "design", "to": "dress", "width": 2}, {"arrows": "to", "from": "design", "to": "dress", "width": 2}, {"arrows": "to", "from": "design", "to": "[", "width": 2}, {"arrows": "to", "from": "design", "to": "[", "width": 2}, {"arrows": "to", "from": "shape", "to": "surface", "width": 2}, {"arrows": "to", "from": "shape", "to": "surface", "width": 2}, {"arrows": "to", "from": "week", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "week", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "week", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "week", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "week", "to": "rotate", "width": 2}, {"arrows": "to", "from": "week", "to": "rotate", "width": 2}, {"arrows": "to", "from": "week", "to": "please", "width": 2}, {"arrows": "to", "from": "week", "to": "please", "width": 2}, {"arrows": "to", "from": "week", "to": "judge", "width": 2}, {"arrows": "to", "from": "week", "to": "judge", "width": 2}, {"arrows": "to", "from": "week", "to": "bring", "width": 2}, {"arrows": "to", "from": "week", "to": "bring", "width": 2}, {"arrows": "to", "from": "\ud83d\ude02", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "wardrobe", "to": "winter", "width": 2}, {"arrows": "to", "from": "wardrobe", "to": "winter", "width": 2}, {"arrows": "to", "from": "wardrobe", "to": "winter", "width": 2}, {"arrows": "to", "from": "wardrobe", "to": "paralympic", "width": 2}, {"arrows": "to", "from": "wardrobe", "to": "paralympic", "width": 2}, {"arrows": "to", "from": "wardrobe", "to": "olympic", "width": 2}, {"arrows": "to", "from": "wardrobe", "to": "olympic", "width": 2}, {"arrows": "to", "from": "wardrobe", "to": "deal", "width": 2}, {"arrows": "to", "from": "wardrobe", "to": "deal", "width": 2}, {"arrows": "to", "from": "winter", "to": "paralympic", "width": 2}, {"arrows": "to", "from": "winter", "to": "paralympic", "width": 2}, {"arrows": "to", "from": "winter", "to": "olympic", "width": 2}, {"arrows": "to", "from": "winter", "to": "olympic", "width": 2}, {"arrows": "to", "from": "winter", "to": "deal", "width": 2}, {"arrows": "to", "from": "winter", "to": "deal", "width": 2}, {"arrows": "to", "from": "olympic", "to": "paralympic", "width": 2}, {"arrows": "to", "from": "olympic", "to": "paralympic", "width": 2}, {"arrows": "to", "from": "olympic", "to": "paralympic", "width": 2}, {"arrows": "to", "from": "go", "to": "someone", "width": 2}, {"arrows": "to", "from": "go", "to": "someone", "width": 2}, {"arrows": "to", "from": "go", "to": "someone", "width": 2}, {"arrows": "to", "from": "go", "to": "go", "width": 2}, {"arrows": "to", "from": "go", "to": "go", "width": 2}, {"arrows": "to", "from": "go", "to": "go", "width": 2}, {"arrows": "to", "from": "mean", "to": "shape", "width": 2}, {"arrows": "to", "from": "mean", "to": "shape", "width": 2}, {"arrows": "to", "from": "check", "to": "dm", "width": 2}, {"arrows": "to", "from": "check", "to": "dm", "width": 2}, {"arrows": "to", "from": "check", "to": "dm", "width": 2}, {"arrows": "to", "from": "addition", "to": "design", "width": 2}, {"arrows": "to", "from": "addition", "to": "design", "width": 2}, {"arrows": "to", "from": "addition", "to": "design", "width": 2}, {"arrows": "to", "from": "addition", "to": "shape", "width": 2}, {"arrows": "to", "from": "addition", "to": "shape", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "winter", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "winter", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "winter", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "wardrobe", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "wardrobe", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "wardrobe", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "olympic", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "olympic", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "olympic", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "kit", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "kit", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "kit", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "paralympic", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "paralympic", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "deal", "width": 2}, {"arrows": "to", "from": "@lululemon", "to": "deal", "width": 2}, {"arrows": "to", "from": "kit", "to": "winter", "width": 2}, {"arrows": "to", "from": "kit", "to": "winter", "width": 2}, {"arrows": "to", "from": "kit", "to": "wardrobe", "width": 2}, {"arrows": "to", "from": "kit", "to": "wardrobe", "width": 2}, {"arrows": "to", "from": "kit", "to": "paralympic", "width": 2}, {"arrows": "to", "from": "kit", "to": "paralympic", "width": 2}, {"arrows": "to", "from": "kit", "to": "olympic", "width": 2}, {"arrows": "to", "from": "kit", "to": "olympic", "width": 2}, {"arrows": "to", "from": "kit", "to": "deal", "width": 2}, {"arrows": "to", "from": "kit", "to": "deal", "width": 2}, {"arrows": "to", "from": "#athleisure", "to": "@mahoney_sarah", "width": 2}, {"arrows": "to", "from": "#athleisure", "to": "@mahoney_sarah", "width": 2}, {"arrows": "to", "from": "#athleisure", "to": "@mahoney_sarah", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "week", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "wear", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "sweat", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "suit", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "rotate", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "please", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "operate", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "judge", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "helpful", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "bring", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "@lululemon", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "@johnvarvatos", "width": 2}, {"arrows": "to", "from": "deal", "to": "paralympic", "width": 2}, {"arrows": "to", "from": "deal", "to": "paralympic", "width": 2}, {"arrows": "to", "from": "deal", "to": "olympic", "width": 2}, {"arrows": "to", "from": "deal", "to": "olympic", "width": 2}, {"arrows": "to", "from": "rotate", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "rotate", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "please", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "please", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "judge", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "judge", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "bring", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "bring", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "unpack", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "unpack", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "trade", "to": "shape", "width": 2}, {"arrows": "to", "from": "trade", "to": "shape", "width": 2}, {"arrows": "to", "from": "trade", "to": "dress", "width": 2}, {"arrows": "to", "from": "trade", "to": "dress", "width": 2}, {"arrows": "to", "from": "trade", "to": "design", "width": 2}, {"arrows": "to", "from": "trade", "to": "design", "width": 2}, {"arrows": "to", "from": "dress", "to": "shape", "width": 2}, {"arrows": "to", "from": "dress", "to": "shape", "width": 2}, {"arrows": "to", "from": "dress", "to": "design", "width": 2}, {"arrows": "to", "from": "dress", "to": "design", "width": 2}, {"arrows": "to", "from": "thing", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "thing", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "sweat", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "sweat", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "sweat", "to": "suit", "width": 2}, {"arrows": "to", "from": "sweat", "to": "suit", "width": 2}, {"arrows": "to", "from": "suit", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "suit", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "store", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "store", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "software", "to": "example", "width": 2}, {"arrows": "to", "from": "software", "to": "example", "width": 2}, {"arrows": "to", "from": "software", "to": "change", "width": 2}, {"arrows": "to", "from": "software", "to": "change", "width": 2}, {"arrows": "to", "from": "software", "to": "center", "width": 2}, {"arrows": "to", "from": "software", "to": "center", "width": 2}, {"arrows": "to", "from": "software", "to": "business", "width": 2}, {"arrows": "to", "from": "software", "to": "business", "width": 2}, {"arrows": "to", "from": "software", "to": "#cfo", "width": 2}, {"arrows": "to", "from": "software", "to": "#cfo", "width": 2}, {"arrows": "to", "from": "example", "to": "center", "width": 2}, {"arrows": "to", "from": "example", "to": "center", "width": 2}, {"arrows": "to", "from": "example", "to": "#cfo", "width": 2}, {"arrows": "to", "from": "example", "to": "#cfo", "width": 2}, {"arrows": "to", "from": "change", "to": "example", "width": 2}, {"arrows": "to", "from": "change", "to": "example", "width": 2}, {"arrows": "to", "from": "change", "to": "center", "width": 2}, {"arrows": "to", "from": "change", "to": "center", "width": 2}, {"arrows": "to", "from": "change", "to": "business", "width": 2}, {"arrows": "to", "from": "change", "to": "business", "width": 2}, {"arrows": "to", "from": "change", "to": "#cfo", "width": 2}, {"arrows": "to", "from": "change", "to": "#cfo", "width": 2}, {"arrows": "to", "from": "center", "to": "#cfo", "width": 2}, {"arrows": "to", "from": "center", "to": "#cfo", "width": 2}, {"arrows": "to", "from": "business", "to": "example", "width": 2}, {"arrows": "to", "from": "business", "to": "example", "width": 2}, {"arrows": "to", "from": "business", "to": "center", "width": 2}, {"arrows": "to", "from": "business", "to": "center", "width": 2}, {"arrows": "to", "from": "business", "to": "#cfo", "width": 2}, {"arrows": "to", "from": "business", "to": "#cfo", "width": 2}, {"arrows": "to", "from": "response", "to": "sad", "width": 2}, {"arrows": "to", "from": "response", "to": "sad", "width": 2}, {"arrows": "to", "from": "repack", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "repack", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "reevaluate", "to": "change", "width": 2}, {"arrows": "to", "from": "reevaluate", "to": "change", "width": 2}, {"arrows": "to", "from": "patent", "to": "trade", "width": 2}, {"arrows": "to", "from": "patent", "to": "trade", "width": 2}, {"arrows": "to", "from": "patent", "to": "shape", "width": 2}, {"arrows": "to", "from": "patent", "to": "shape", "width": 2}, {"arrows": "to", "from": "patent", "to": "dress", "width": 2}, {"arrows": "to", "from": "patent", "to": "dress", "width": 2}, {"arrows": "to", "from": "patent", "to": "design", "width": 2}, {"arrows": "to", "from": "patent", "to": "design", "width": 2}, {"arrows": "to", "from": "pant", "to": "shape", "width": 2}, {"arrows": "to", "from": "pant", "to": "shape", "width": 2}, {"arrows": "to", "from": "mask", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "mask", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "mask", "to": "pocket", "width": 2}, {"arrows": "to", "from": "mask", "to": "pocket", "width": 2}, {"arrows": "to", "from": "mask", "to": "h", "width": 2}, {"arrows": "to", "from": "mask", "to": "h", "width": 2}, {"arrows": "to", "from": "lululemon", "to": "@mahoney_sarah", "width": 2}, {"arrows": "to", "from": "lululemon", "to": "@mahoney_sarah", "width": 2}, {"arrows": "to", "from": "lululemon", "to": "#athleisure", "width": 2}, {"arrows": "to", "from": "lululemon", "to": "#athleisure", "width": 2}, {"arrows": "to", "from": "laundry", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "laundry", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "home", "to": "sweat", "width": 2}, {"arrows": "to", "from": "home", "to": "sweat", "width": 2}, {"arrows": "to", "from": "hold", "to": "software", "width": 2}, {"arrows": "to", "from": "hold", "to": "software", "width": 2}, {"arrows": "to", "from": "hold", "to": "example", "width": 2}, {"arrows": "to", "from": "hold", "to": "example", "width": 2}, {"arrows": "to", "from": "hold", "to": "change", "width": 2}, {"arrows": "to", "from": "hold", "to": "change", "width": 2}, {"arrows": "to", "from": "hold", "to": "center", "width": 2}, {"arrows": "to", "from": "hold", "to": "center", "width": 2}, {"arrows": "to", "from": "hold", "to": "business", "width": 2}, {"arrows": "to", "from": "hold", "to": "business", "width": 2}, {"arrows": "to", "from": "hold", "to": "#cfo", "width": 2}, {"arrows": "to", "from": "hold", "to": "#cfo", "width": 2}, {"arrows": "to", "from": "get", "to": "go", "width": 2}, {"arrows": "to", "from": "get", "to": "go", "width": 2}, {"arrows": "to", "from": "feud", "to": "copycat", "width": 2}, {"arrows": "to", "from": "feud", "to": "copycat", "width": 2}, {"arrows": "to", "from": "discount", "to": "change", "width": 2}, {"arrows": "to", "from": "discount", "to": "change", "width": 2}, {"arrows": "to", "from": "[", "to": "shape", "width": 2}, {"arrows": "to", "from": "[", "to": "shape", "width": 2}, {"arrows": "to", "from": "budget", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "budget", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "budget", "to": "zero", "width": 2}, {"arrows": "to", "from": "budget", "to": "zero", "width": 2}, {"arrows": "to", "from": "zero", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "bag", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "bag", "to": "\ud83d\ude02", "width": 2}, {"arrows": "to", "from": "athleta", "to": "lululemon", "width": 2}, {"arrows": "to", "from": "athleta", "to": "lululemon", "width": 2}, {"arrows": "to", "from": "athleta", "to": "@mahoney_sarah", "width": 2}, {"arrows": "to", "from": "athleta", "to": "@mahoney_sarah", "width": 2}, {"arrows": "to", "from": "athleta", "to": "#athleisure", "width": 2}, {"arrows": "to", "from": "athleta", "to": "#athleisure", "width": 2}, {"arrows": "to", "from": "@tesla", "to": "budget", "width": 2}, {"arrows": "to", "from": "@tesla", "to": "budget", "width": 2}, {"arrows": "to", "from": "@jonmcneill", "to": "budget", "width": 2}, {"arrows": "to", "from": "@jonmcneill", "to": "budget", "width": 2}, {"arrows": "to", "from": "@jefftomaneng", "to": "budget", "width": 2}, {"arrows": "to", "from": "@jefftomaneng", "to": "budget", "width": 2}, {"arrows": "to", "from": "@gridspace", "to": "software", "width": 2}, {"arrows": "to", "from": "@gridspace", "to": "software", "width": 2}, {"arrows": "to", "from": "@gridspace", "to": "hold", "width": 2}, {"arrows": "to", "from": "@gridspace", "to": "hold", "width": 2}, {"arrows": "to", "from": "@gridspace", "to": "example", "width": 2}, {"arrows": "to", "from": "@gridspace", "to": "example", "width": 2}, {"arrows": "to", "from": "@gridspace", "to": "change", "width": 2}, {"arrows": "to", "from": "@gridspace", "to": "change", "width": 2}, {"arrows": "to", "from": "@gridspace", "to": "center", "width": 2}, {"arrows": "to", "from": "@gridspace", "to": "center", "width": 2}, {"arrows": "to", "from": "@gridspace", "to": "business", "width": 2}, {"arrows": "to", "from": "@gridspace", "to": "business", "width": 2}, {"arrows": "to", "from": "@gridspace", "to": "#cfo", "width": 2}, {"arrows": "to", "from": "@gridspace", "to": "#cfo", "width": 2}, {"arrows": "to", "from": "@ewoodhouse7", "to": "mask", "width": 2}, {"arrows": "to", "from": "@ewoodhouse7", "to": "mask", "width": 2}, {"arrows": "to", "from": "@ewoodhouse7", "to": "@lululemon", "width": 2}, {"arrows": "to", "from": "@ewoodhouse7", "to": "@lululemon", "width": 2}, {"arrows": "to", "from": "\ud83c\udf41", "to": "winter", "width": 2}, {"arrows": "to", "from": "\ud83c\udf41", "to": "feedback", "width": 2}, {"arrows": "to", "from": "yo", "to": "think", "width": 2}, {"arrows": "to", "from": "yo", "to": "temp", "width": 2}, {"arrows": "to", "from": "yo", "to": "research", "width": 2}, {"arrows": "to", "from": "yo", "to": "please", "width": 2}, {"arrows": "to", "from": "yo", "to": "drop", "width": 2}, {"arrows": "to", "from": "yo", "to": "customer", "width": 2}, {"arrows": "to", "from": "yo", "to": "advise", "width": 2}, {"arrows": "to", "from": "yesterday", "to": "worth", "width": 2}, {"arrows": "to", "from": "yesterday", "to": "life", "width": 2}, {"arrows": "to", "from": "year", "to": "stuff", "width": 2}, {"arrows": "to", "from": "year", "to": "pandemic", "width": 2}, {"arrows": "to", "from": "year", "to": "iq", "width": 2}, {"arrows": "to", "from": "year", "to": "home", "width": 2}, {"arrows": "to", "from": "yeah", "to": "\ud83d\ude0e", "width": 2}, {"arrows": "to", "from": "yeah", "to": "\u2026", "width": 2}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "physics",
+            "nodes"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

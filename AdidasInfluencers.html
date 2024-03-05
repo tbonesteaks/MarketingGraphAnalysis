@@ -1,0 +1,508 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 1024px;
+                 height: 768px;
+                 background-color: #0c4df0;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Atari_Jones">Atari_Jones</option>
+                                
+                                    <option value="AilsaForshaw">AilsaForshaw</option>
+                                
+                                    <option value="aarongreenberg">aarongreenberg</option>
+                                
+                                    <option value="Xbox">Xbox</option>
+                                
+                                    <option value="godfree">godfree</option>
+                                
+                                    <option value="steinekin">steinekin</option>
+                                
+                                    <option value="MLozada">MLozada</option>
+                                
+                                    <option value="LEGIQN">LEGIQN</option>
+                                
+                                    <option value="FootwearNews">FootwearNews</option>
+                                
+                                    <option value="wwd">wwd</option>
+                                
+                                    <option value="thredUP">thredUP</option>
+                                
+                                    <option value="HipHopWired">HipHopWired</option>
+                                
+                                    <option value="Creat1ve">Creat1ve</option>
+                                
+                                    <option value="RunBlogRun">RunBlogRun</option>
+                                
+                                    <option value="KatGraham">KatGraham</option>
+                                
+                                    <option value="MikeBubbins">MikeBubbins</option>
+                                
+                                    <option value="MarkMan23">MarkMan23</option>
+                                
+                                    <option value="russbengtson">russbengtson</option>
+                                
+                                    <option value="Dart_Adams">Dart_Adams</option>
+                                
+                                    <option value="momsfocus">momsfocus</option>
+                                
+                                    <option value="WishATL">WishATL</option>
+                                
+                                    <option value="jermainedupri">jermainedupri</option>
+                                
+                                    <option value="AllianaSabrina">AllianaSabrina</option>
+                                
+                                    <option value="La3Life">La3Life</option>
+                                
+                                    <option value="jwelter47">jwelter47</option>
+                                
+                                    <option value="LAFC">LAFC</option>
+                                
+                                    <option value="shopWSS">shopWSS</option>
+                                
+                                    <option value="LAGalaxy">LAGalaxy</option>
+                                
+                                    <option value="adidasfootball">adidasfootball</option>
+                                
+                                    <option value="Carbon">Carbon</option>
+                                
+                                    <option value="gutterdan_">gutterdan_</option>
+                                
+                                    <option value="MVictors">MVictors</option>
+                                
+                                    <option value="carsonturner">carsonturner</option>
+                                
+                                    <option value="economist">economist</option>
+                                
+                                    <option value="Gfunkera86">Gfunkera86</option>
+                                
+                                    <option value="joshbobrowsky">joshbobrowsky</option>
+                                
+                                    <option value="beijingdou">beijingdou</option>
+                                
+                                    <option value="DegenNFTs">DegenNFTs</option>
+                                
+                                    <option value="BrantlyMillegan">BrantlyMillegan</option>
+                                
+                                    <option value="NPDMattPowell">NPDMattPowell</option>
+                                
+                                    <option value="PawlowskiMario">PawlowskiMario</option>
+                                
+                                    <option value="FrRonconi">FrRonconi</option>
+                                
+                                    <option value="MrUnloved1s">MrUnloved1s</option>
+                                
+                                    <option value="iAmTMCII">iAmTMCII</option>
+                                
+                                    <option value="snkr_twitr">snkr_twitr</option>
+                                
+                                    <option value="solefed">solefed</option>
+                                
+                                    <option value="bayc9797">bayc9797</option>
+                                
+                                    <option value="Complex">Complex</option>
+                                
+                                    <option value="ComplexStyle">ComplexStyle</option>
+                                
+                                    <option value="Malome_TT">Malome_TT</option>
+                                
+                                    <option value="UniWatch">UniWatch</option>
+                                
+                                    <option value="BlazePizza">BlazePizza</option>
+                                
+                                    <option value="hotpockets">hotpockets</option>
+                                
+                                    <option value="NickDePaula">NickDePaula</option>
+                                
+                                    <option value="boardroom">boardroom</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": "Atari_Jones", "label": "Atari_Jones", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "AilsaForshaw", "label": "AilsaForshaw", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "aarongreenberg", "label": "aarongreenberg", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Xbox", "label": "Xbox", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "godfree", "label": "godfree", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "steinekin", "label": "steinekin", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MLozada", "label": "MLozada", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "LEGIQN", "label": "LEGIQN", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "FootwearNews", "label": "FootwearNews", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "wwd", "label": "wwd", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "thredUP", "label": "thredUP", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "HipHopWired", "label": "HipHopWired", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Creat1ve", "label": "Creat1ve", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "RunBlogRun", "label": "RunBlogRun", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "KatGraham", "label": "KatGraham", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MikeBubbins", "label": "MikeBubbins", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MarkMan23", "label": "MarkMan23", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "russbengtson", "label": "russbengtson", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Dart_Adams", "label": "Dart_Adams", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "momsfocus", "label": "momsfocus", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "WishATL", "label": "WishATL", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "jermainedupri", "label": "jermainedupri", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "AllianaSabrina", "label": "AllianaSabrina", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "La3Life", "label": "La3Life", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "jwelter47", "label": "jwelter47", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "LAFC", "label": "LAFC", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "shopWSS", "label": "shopWSS", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "LAGalaxy", "label": "LAGalaxy", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "adidasfootball", "label": "adidasfootball", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Carbon", "label": "Carbon", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "gutterdan_", "label": "gutterdan_", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MVictors", "label": "MVictors", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "carsonturner", "label": "carsonturner", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "economist", "label": "economist", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Gfunkera86", "label": "Gfunkera86", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "joshbobrowsky", "label": "joshbobrowsky", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "beijingdou", "label": "beijingdou", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "DegenNFTs", "label": "DegenNFTs", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "BrantlyMillegan", "label": "BrantlyMillegan", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "NPDMattPowell", "label": "NPDMattPowell", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "PawlowskiMario", "label": "PawlowskiMario", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "FrRonconi", "label": "FrRonconi", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "MrUnloved1s", "label": "MrUnloved1s", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "iAmTMCII", "label": "iAmTMCII", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "snkr_twitr", "label": "snkr_twitr", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "solefed", "label": "solefed", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "bayc9797", "label": "bayc9797", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Complex", "label": "Complex", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "ComplexStyle", "label": "ComplexStyle", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Malome_TT", "label": "Malome_TT", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "UniWatch", "label": "UniWatch", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "BlazePizza", "label": "BlazePizza", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "hotpockets", "label": "hotpockets", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "NickDePaula", "label": "NickDePaula", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "boardroom", "label": "boardroom", "shape": "dot", "size": 40}]);
+                  edges = new vis.DataSet([{"arrows": "to", "from": "Atari_Jones", "to": "Atari_Jones", "width": 2}, {"arrows": "to", "from": "Atari_Jones", "to": "Atari_Jones", "width": 2}, {"arrows": "to", "from": "Atari_Jones", "to": "Atari_Jones", "width": 2}, {"arrows": "to", "from": "Atari_Jones", "to": "Atari_Jones", "width": 2}, {"arrows": "to", "from": "Atari_Jones", "to": "Atari_Jones", "width": 2}, {"arrows": "to", "from": "AilsaForshaw", "to": "AilsaForshaw", "width": 2}, {"arrows": "to", "from": "AilsaForshaw", "to": "AilsaForshaw", "width": 2}, {"arrows": "to", "from": "AilsaForshaw", "to": "AilsaForshaw", "width": 2}, {"arrows": "to", "from": "AilsaForshaw", "to": "AilsaForshaw", "width": 2}, {"arrows": "to", "from": "AilsaForshaw", "to": "AilsaForshaw", "width": 2}, {"arrows": "to", "from": "AilsaForshaw", "to": "AilsaForshaw", "width": 2}, {"arrows": "to", "from": "AilsaForshaw", "to": "AilsaForshaw", "width": 2}, {"arrows": "to", "from": "AilsaForshaw", "to": "AilsaForshaw", "width": 2}, {"arrows": "to", "from": "AilsaForshaw", "to": "AilsaForshaw", "width": 2}, {"arrows": "to", "from": "AilsaForshaw", "to": "AilsaForshaw", "width": 2}, {"arrows": "to", "from": "AilsaForshaw", "to": "AilsaForshaw", "width": 2}, {"arrows": "to", "from": "AilsaForshaw", "to": "AilsaForshaw", "width": 2}, {"arrows": "to", "from": "AilsaForshaw", "to": "AilsaForshaw", "width": 2}, {"arrows": "to", "from": "aarongreenberg", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "aarongreenberg", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "aarongreenberg", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "aarongreenberg", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "aarongreenberg", "to": "godfree", "width": 2}, {"arrows": "to", "from": "Xbox", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "godfree", "to": "aarongreenberg", "width": 2}, {"arrows": "to", "from": "godfree", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "godfree", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "godfree", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "steinekin", "to": "aarongreenberg", "width": 2}, {"arrows": "to", "from": "steinekin", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "steinekin", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "steinekin", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "steinekin", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "steinekin", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "steinekin", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "steinekin", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "MLozada", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "MLozada", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "MLozada", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "MLozada", "to": "LEGIQN", "width": 2}, {"arrows": "to", "from": "FootwearNews", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "wwd", "to": "thredUP", "width": 2}, {"arrows": "to", "from": "thredUP", "to": "wwd", "width": 2}, {"arrows": "to", "from": "thredUP", "to": "thredUP", "width": 2}, {"arrows": "to", "from": "HipHopWired", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "HipHopWired", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "Creat1ve", "to": "Creat1ve", "width": 2}, {"arrows": "to", "from": "RunBlogRun", "to": "RunBlogRun", "width": 2}, {"arrows": "to", "from": "KatGraham", "to": "KatGraham", "width": 2}, {"arrows": "to", "from": "MikeBubbins", "to": "MikeBubbins", "width": 2}, {"arrows": "to", "from": "MarkMan23", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "MarkMan23", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "MLozada", "width": 2}, {"arrows": "to", "from": "LEGIQN", "to": "LEGIQN", "width": 2}, {"arrows": "to", "from": "russbengtson", "to": "Dart_Adams", "width": 2}, {"arrows": "to", "from": "russbengtson", "to": "Dart_Adams", "width": 2}, {"arrows": "to", "from": "momsfocus", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "momsfocus", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "WishATL", "to": "jermainedupri", "width": 2}, {"arrows": "to", "from": "WishATL", "to": "jermainedupri", "width": 2}, {"arrows": "to", "from": "jermainedupri", "to": "WishATL", "width": 2}, {"arrows": "to", "from": "AllianaSabrina", "to": "AllianaSabrina", "width": 2}, {"arrows": "to", "from": "La3Life", "to": "La3Life", "width": 2}, {"arrows": "to", "from": "jwelter47", "to": "jwelter47", "width": 2}, {"arrows": "to", "from": "LAFC", "to": "shopWSS", "width": 2}, {"arrows": "to", "from": "LAFC", "to": "shopWSS", "width": 2}, {"arrows": "to", "from": "LAFC", "to": "shopWSS", "width": 2}, {"arrows": "to", "from": "LAFC", "to": "shopWSS", "width": 2}, {"arrows": "to", "from": "LAFC", "to": "shopWSS", "width": 2}, {"arrows": "to", "from": "LAFC", "to": "shopWSS", "width": 2}, {"arrows": "to", "from": "LAFC", "to": "shopWSS", "width": 2}, {"arrows": "to", "from": "LAFC", "to": "LAFC", "width": 2}, {"arrows": "to", "from": "LAFC", "to": "LAFC", "width": 2}, {"arrows": "to", "from": "shopWSS", "to": "LAFC", "width": 2}, {"arrows": "to", "from": "shopWSS", "to": "LAFC", "width": 2}, {"arrows": "to", "from": "shopWSS", "to": "LAFC", "width": 2}, {"arrows": "to", "from": "shopWSS", "to": "LAFC", "width": 2}, {"arrows": "to", "from": "shopWSS", "to": "LAGalaxy", "width": 2}, {"arrows": "to", "from": "shopWSS", "to": "LAGalaxy", "width": 2}, {"arrows": "to", "from": "LAGalaxy", "to": "shopWSS", "width": 2}, {"arrows": "to", "from": "LAGalaxy", "to": "LAGalaxy", "width": 2}, {"arrows": "to", "from": "adidasfootball", "to": "LAGalaxy", "width": 2}, {"arrows": "to", "from": "Carbon", "to": "Carbon", "width": 2}, {"arrows": "to", "from": "gutterdan_", "to": "gutterdan_", "width": 2}, {"arrows": "to", "from": "MVictors", "to": "MVictors", "width": 2}, {"arrows": "to", "from": "MVictors", "to": "MVictors", "width": 2}, {"arrows": "to", "from": "MVictors", "to": "MVictors", "width": 2}, {"arrows": "to", "from": "MVictors", "to": "MVictors", "width": 2}, {"arrows": "to", "from": "MVictors", "to": "MVictors", "width": 2}, {"arrows": "to", "from": "MVictors", "to": "MVictors", "width": 2}, {"arrows": "to", "from": "carsonturner", "to": "economist", "width": 2}, {"arrows": "to", "from": "carsonturner", "to": "Gfunkera86", "width": 2}, {"arrows": "to", "from": "economist", "to": "Gfunkera86", "width": 2}, {"arrows": "to", "from": "joshbobrowsky", "to": "beijingdou", "width": 2}, {"arrows": "to", "from": "DegenNFTs", "to": "BrantlyMillegan", "width": 2}, {"arrows": "to", "from": "NPDMattPowell", "to": "FootwearNews", "width": 2}, {"arrows": "to", "from": "PawlowskiMario", "to": "PawlowskiMario", "width": 2}, {"arrows": "to", "from": "FrRonconi", "to": "PawlowskiMario", "width": 2}, {"arrows": "to", "from": "MrUnloved1s", "to": "iAmTMCII", "width": 2}, {"arrows": "to", "from": "MrUnloved1s", "to": "iAmTMCII", "width": 2}, {"arrows": "to", "from": "MrUnloved1s", "to": "snkr_twitr", "width": 2}, {"arrows": "to", "from": "MrUnloved1s", "to": "snkr_twitr", "width": 2}, {"arrows": "to", "from": "MrUnloved1s", "to": "solefed", "width": 2}, {"arrows": "to", "from": "MrUnloved1s", "to": "solefed", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "iAmTMCII", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "iAmTMCII", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "iAmTMCII", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "iAmTMCII", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "iAmTMCII", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "MrUnloved1s", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "MrUnloved1s", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "MrUnloved1s", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "MrUnloved1s", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "MrUnloved1s", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "snkr_twitr", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "snkr_twitr", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "snkr_twitr", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "snkr_twitr", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "snkr_twitr", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "snkr_twitr", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "solefed", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "solefed", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "solefed", "width": 2}, {"arrows": "to", "from": "iAmTMCII", "to": "solefed", "width": 2}, {"arrows": "to", "from": "bayc9797", "to": "bayc9797", "width": 2}, {"arrows": "to", "from": "Complex", "to": "ComplexStyle", "width": 2}, {"arrows": "to", "from": "Malome_TT", "to": "Malome_TT", "width": 2}, {"arrows": "to", "from": "UniWatch", "to": "UniWatch", "width": 2}, {"arrows": "to", "from": "BlazePizza", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "BlazePizza", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "BlazePizza", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "BlazePizza", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "BlazePizza", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "BlazePizza", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "BlazePizza", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "BlazePizza", "to": "hotpockets", "width": 2}, {"arrows": "to", "from": "BlazePizza", "to": "hotpockets", "width": 2}, {"arrows": "to", "from": "BlazePizza", "to": "hotpockets", "width": 2}, {"arrows": "to", "from": "BlazePizza", "to": "hotpockets", "width": 2}, {"arrows": "to", "from": "BlazePizza", "to": "hotpockets", "width": 2}, {"arrows": "to", "from": "BlazePizza", "to": "hotpockets", "width": 2}, {"arrows": "to", "from": "BlazePizza", "to": "hotpockets", "width": 2}, {"arrows": "to", "from": "hotpockets", "to": "BlazePizza", "width": 2}, {"arrows": "to", "from": "hotpockets", "to": "BlazePizza", "width": 2}, {"arrows": "to", "from": "hotpockets", "to": "BlazePizza", "width": 2}, {"arrows": "to", "from": "hotpockets", "to": "BlazePizza", "width": 2}, {"arrows": "to", "from": "hotpockets", "to": "BlazePizza", "width": 2}, {"arrows": "to", "from": "hotpockets", "to": "BlazePizza", "width": 2}, {"arrows": "to", "from": "hotpockets", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "hotpockets", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "hotpockets", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "hotpockets", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "hotpockets", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "hotpockets", "to": "Xbox", "width": 2}, {"arrows": "to", "from": "NickDePaula", "to": "boardroom", "width": 2}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "nodes",
+            "physics"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

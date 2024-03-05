@@ -1,0 +1,719 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 1024px;
+                 height: 768px;
+                 background-color: #0c4df0;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 1024px;
+                 height: 768px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="world">world</option>
+                                
+                                    <option value="know">know</option>
+                                
+                                    <option value="go">go</option>
+                                
+                                    <option value="iphone">iphone</option>
+                                
+                                    <option value="catalyst">catalyst</option>
+                                
+                                    <option value="#phonecase">#phonecase</option>
+                                
+                                    <option value="time">time</option>
+                                
+                                    <option value="matter">matter</option>
+                                
+                                    <option value="compare">compare</option>
+                                
+                                    <option value="@ailsaforshaw">@ailsaforshaw</option>
+                                
+                                    <option value="#bigsouth90">#bigsouth90</option>
+                                
+                                    <option value="@adidas">@adidas</option>
+                                
+                                    <option value="…">…</option>
+                                
+                                    <option value="’">’</option>
+                                
+                                    <option value="life">life</option>
+                                
+                                    <option value="collab">collab</option>
+                                
+                                    <option value="#complexcon">#complexcon</option>
+                                
+                                    <option value="in-store">in-store</option>
+                                
+                                    <option value="online">online</option>
+                                
+                                    <option value="visit">visit</option>
+                                
+                                    <option value="#snipesusa">#snipesusa</option>
+                                
+                                    <option value="purchase">purchase</option>
+                                
+                                    <option value="forum">forum</option>
+                                
+                                    <option value="tech">tech</option>
+                                
+                                    <option value="#xbox20">#xbox20</option>
+                                
+                                    <option value="we've">we've</option>
+                                
+                                    <option value="vote">vote</option>
+                                
+                                    <option value="carbon">carbon</option>
+                                
+                                    <option value="@3dprintindustry">@3dprintindustry</option>
+                                
+                                    <option value="we're">we're</option>
+                                
+                                    <option value="share">share</option>
+                                
+                                    <option value="store">store</option>
+                                
+                                    <option value="shop">shop</option>
+                                
+                                    <option value="📲">📲</option>
+                                
+                                    <option value="pair">pair</option>
+                                
+                                    <option value="@solesavy">@solesavy</option>
+                                
+                                    <option value="yeezy">yeezy</option>
+                                
+                                    <option value=""">"</option>
+                                
+                                    <option value="knit">knit</option>
+                                
+                                    <option value="/">/</option>
+                                
+                                    <option value="tint">tint</option>
+                                
+                                    <option value="orange">orange</option>
+                                
+                                    <option value="mx">mx</option>
+                                
+                                    <option value="blue">blue</option>
+                                
+                                    <option value="@hayabusacombat">@hayabusacombat</option>
+                                
+                                    <option value="%">%</option>
+                                
+                                    <option value="season">season</option>
+                                
+                                    <option value="smh">smh</option>
+                                
+                                    <option value="year">year</option>
+                                
+                                    <option value="week's">week's</option>
+                                
+                                    <option value="@beyonce">@beyonce</option>
+                                
+                                    <option value="️">️</option>
+                                
+                                    <option value="⁠">⁠</option>
+                                
+                                    <option value="holiday">holiday</option>
+                                
+                                    <option value="guide">guide</option>
+                                
+                                    <option value="gift">gift</option>
+                                
+                                    <option value="wotherspoon">wotherspoon</option>
+                                
+                                    <option value="earth">earth</option>
+                                
+                                    <option value="superstar">superstar</option>
+                                
+                                    <option value="atl">atl</option>
+                                
+                                    <option value="track">track</option>
+                                
+                                    <option value="skirt">skirt</option>
+                                
+                                    <option value="pant">pant</option>
+                                
+                                    <option value="take">take</option>
+                                
+                                    <option value="super">super</option>
+                                
+                                    <option value="#pixelvault">#pixelvault</option>
+                                
+                                    <option value="style">style</option>
+                                
+                                    <option value="street">street</option>
+                                
+                                    <option value="fighter">fighter</option>
+                                
+                                    <option value="block">block</option>
+                                
+                                    <option value="steph">steph</option>
+                                
+                                    <option value="scott">scott</option>
+                                
+                                    <option value="rookie">rookie</option>
+                                
+                                    <option value="park">park</option>
+                                
+                                    <option value="@ivypark">@ivypark</option>
+                                
+                                    <option value="para">para</option>
+                                
+                                    <option value="los">los</option>
+                                
+                                    <option value="pst">pst</option>
+                                
+                                    <option value="land">land</option>
+                                
+                                    <option value="jeremy">jeremy</option>
+                                
+                                    <option value="hoodie">hoodie</option>
+                                
+                                    <option value="giant">giant</option>
+                                
+                                    <option value="get">get</option>
+                                
+                                    <option value="la">la</option>
+                                
+                                    <option value="game">game</option>
+                                
+                                    <option value="family">family</option>
+                                
+                                    <option value="def">def</option>
+                                
+                                    <option value="trae">trae</option>
+                                
+                                    <option value="collection">collection</option>
+                                
+                                    <option value="bait">bait</option>
+                                
+                                    <option value="check">check</option>
+                                
+                                    <option value="break">break</option>
+                                
+                                    <option value="basketball">basketball</option>
+                                
+                                    <option value="court">court</option>
+                                
+                                    <option value="acquisition">acquisition</option>
+                                
+                                    <option value="@xbox">@xbox</option>
+                                
+                                    <option value="lol">lol</option>
+                                
+                                    <option value="@goodgamebro">@goodgamebro</option>
+                                
+                                    <option value="xbox">xbox</option>
+                                
+                                    <option value="kit">kit</option>
+                                
+                                    <option value="follow">follow</option>
+                                
+                                    <option value="chance">chance</option>
+                                
+                                    <option value="#xboxsweepstakes">#xboxsweepstakes</option>
+                                
+                                    <option value="watch">watch</option>
+                                
+                                    <option value="app">app</option>
+                                
+                                    <option value="wash">wash</option>
+                                
+                                    <option value="tree">tree</option>
+                                
+                                    <option value="🍑">🍑</option>
+                                
+                                    <option value="colorway">colorway</option>
+                                
+                                    <option value="tomorrow">tomorrow</option>
+                                
+                                    <option value="morning">morning</option>
+                                
+                                    <option value="sustainability">sustainability</option>
+                                
+                                    <option value="award">award</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": "world", "label": "world", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "know", "label": "know", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "go", "label": "go", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "iphone", "label": "iphone", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "catalyst", "label": "catalyst", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "#phonecase", "label": "#phonecase", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "time", "label": "time", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "matter", "label": "matter", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "compare", "label": "compare", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@ailsaforshaw", "label": "@ailsaforshaw", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "#bigsouth90", "label": "#bigsouth90", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@adidas", "label": "@adidas", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "\u2026", "label": "\u2026", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "\u2019", "label": "\u2019", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "life", "label": "life", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "collab", "label": "collab", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "#complexcon", "label": "#complexcon", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "in-store", "label": "in-store", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "online", "label": "online", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "visit", "label": "visit", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "#snipesusa", "label": "#snipesusa", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "purchase", "label": "purchase", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "forum", "label": "forum", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "tech", "label": "tech", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "#xbox20", "label": "#xbox20", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "we\u0027ve", "label": "we\u0027ve", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "vote", "label": "vote", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "carbon", "label": "carbon", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@3dprintindustry", "label": "@3dprintindustry", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "we\u0027re", "label": "we\u0027re", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "share", "label": "share", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "store", "label": "store", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "shop", "label": "shop", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "\ud83d\udcf2", "label": "\ud83d\udcf2", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "pair", "label": "pair", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@solesavy", "label": "@solesavy", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "yeezy", "label": "yeezy", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "\"", "label": "\"", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "knit", "label": "knit", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "/", "label": "/", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "tint", "label": "tint", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "orange", "label": "orange", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "mx", "label": "mx", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "blue", "label": "blue", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@hayabusacombat", "label": "@hayabusacombat", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "%", "label": "%", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "season", "label": "season", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "smh", "label": "smh", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "year", "label": "year", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "week\u0027s", "label": "week\u0027s", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@beyonce", "label": "@beyonce", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "\ufe0f", "label": "\ufe0f", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "\u2060", "label": "\u2060", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "holiday", "label": "holiday", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "guide", "label": "guide", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "gift", "label": "gift", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "wotherspoon", "label": "wotherspoon", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "earth", "label": "earth", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "superstar", "label": "superstar", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "atl", "label": "atl", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "track", "label": "track", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "skirt", "label": "skirt", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "pant", "label": "pant", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "take", "label": "take", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "super", "label": "super", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "#pixelvault", "label": "#pixelvault", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "style", "label": "style", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "street", "label": "street", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "fighter", "label": "fighter", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "block", "label": "block", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "steph", "label": "steph", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "scott", "label": "scott", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "rookie", "label": "rookie", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "park", "label": "park", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@ivypark", "label": "@ivypark", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "para", "label": "para", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "los", "label": "los", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "pst", "label": "pst", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "land", "label": "land", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "jeremy", "label": "jeremy", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "hoodie", "label": "hoodie", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "giant", "label": "giant", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "get", "label": "get", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "la", "label": "la", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "game", "label": "game", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "family", "label": "family", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "def", "label": "def", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "trae", "label": "trae", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "collection", "label": "collection", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "bait", "label": "bait", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "check", "label": "check", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "break", "label": "break", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "basketball", "label": "basketball", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "court", "label": "court", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "acquisition", "label": "acquisition", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@xbox", "label": "@xbox", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "lol", "label": "lol", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "@goodgamebro", "label": "@goodgamebro", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "xbox", "label": "xbox", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "kit", "label": "kit", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "follow", "label": "follow", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "chance", "label": "chance", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "#xboxsweepstakes", "label": "#xboxsweepstakes", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "watch", "label": "watch", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "app", "label": "app", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "wash", "label": "wash", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "tree", "label": "tree", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "\ud83c\udf51", "label": "\ud83c\udf51", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "colorway", "label": "colorway", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "tomorrow", "label": "tomorrow", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "morning", "label": "morning", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "sustainability", "label": "sustainability", "shape": "dot", "size": 40}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "award", "label": "award", "shape": "dot", "size": 40}]);
+                  edges = new vis.DataSet([{"arrows": "to", "from": "world", "to": "know", "width": 2}, {"arrows": "to", "from": "world", "to": "know", "width": 2}, {"arrows": "to", "from": "world", "to": "know", "width": 2}, {"arrows": "to", "from": "world", "to": "know", "width": 2}, {"arrows": "to", "from": "world", "to": "know", "width": 2}, {"arrows": "to", "from": "world", "to": "know", "width": 2}, {"arrows": "to", "from": "world", "to": "know", "width": 2}, {"arrows": "to", "from": "world", "to": "know", "width": 2}, {"arrows": "to", "from": "world", "to": "know", "width": 2}, {"arrows": "to", "from": "world", "to": "know", "width": 2}, {"arrows": "to", "from": "world", "to": "know", "width": 2}, {"arrows": "to", "from": "world", "to": "know", "width": 2}, {"arrows": "to", "from": "world", "to": "know", "width": 2}, {"arrows": "to", "from": "go", "to": "world", "width": 2}, {"arrows": "to", "from": "go", "to": "world", "width": 2}, {"arrows": "to", "from": "go", "to": "world", "width": 2}, {"arrows": "to", "from": "go", "to": "world", "width": 2}, {"arrows": "to", "from": "go", "to": "world", "width": 2}, {"arrows": "to", "from": "go", "to": "world", "width": 2}, {"arrows": "to", "from": "go", "to": "world", "width": 2}, {"arrows": "to", "from": "go", "to": "world", "width": 2}, {"arrows": "to", "from": "go", "to": "world", "width": 2}, {"arrows": "to", "from": "go", "to": "world", "width": 2}, {"arrows": "to", "from": "go", "to": "world", "width": 2}, {"arrows": "to", "from": "go", "to": "world", "width": 2}, {"arrows": "to", "from": "go", "to": "world", "width": 2}, {"arrows": "to", "from": "go", "to": "know", "width": 2}, {"arrows": "to", "from": "go", "to": "know", "width": 2}, {"arrows": "to", "from": "go", "to": "know", "width": 2}, {"arrows": "to", "from": "go", "to": "know", "width": 2}, {"arrows": "to", "from": "go", "to": "know", "width": 2}, {"arrows": "to", "from": "go", "to": "know", "width": 2}, {"arrows": "to", "from": "go", "to": "know", "width": 2}, {"arrows": "to", "from": "go", "to": "know", "width": 2}, {"arrows": "to", "from": "go", "to": "know", "width": 2}, {"arrows": "to", "from": "go", "to": "know", "width": 2}, {"arrows": "to", "from": "go", "to": "know", "width": 2}, {"arrows": "to", "from": "go", "to": "know", "width": 2}, {"arrows": "to", "from": "go", "to": "know", "width": 2}, {"arrows": "to", "from": "iphone", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "iphone", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "iphone", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "iphone", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "iphone", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "iphone", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "iphone", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "iphone", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "iphone", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "iphone", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "iphone", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "iphone", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "iphone", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "iphone", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "iphone", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "iphone", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "iphone", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "iphone", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "iphone", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "iphone", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "iphone", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "iphone", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "iphone", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "iphone", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "iphone", "to": "time", "width": 2}, {"arrows": "to", "from": "iphone", "to": "time", "width": 2}, {"arrows": "to", "from": "iphone", "to": "time", "width": 2}, {"arrows": "to", "from": "iphone", "to": "time", "width": 2}, {"arrows": "to", "from": "iphone", "to": "time", "width": 2}, {"arrows": "to", "from": "iphone", "to": "time", "width": 2}, {"arrows": "to", "from": "iphone", "to": "time", "width": 2}, {"arrows": "to", "from": "iphone", "to": "time", "width": 2}, {"arrows": "to", "from": "iphone", "to": "time", "width": 2}, {"arrows": "to", "from": "iphone", "to": "time", "width": 2}, {"arrows": "to", "from": "iphone", "to": "time", "width": 2}, {"arrows": "to", "from": "iphone", "to": "matter", "width": 2}, {"arrows": "to", "from": "iphone", "to": "matter", "width": 2}, {"arrows": "to", "from": "iphone", "to": "matter", "width": 2}, {"arrows": "to", "from": "iphone", "to": "matter", "width": 2}, {"arrows": "to", "from": "iphone", "to": "matter", "width": 2}, {"arrows": "to", "from": "iphone", "to": "matter", "width": 2}, {"arrows": "to", "from": "iphone", "to": "matter", "width": 2}, {"arrows": "to", "from": "iphone", "to": "matter", "width": 2}, {"arrows": "to", "from": "iphone", "to": "matter", "width": 2}, {"arrows": "to", "from": "iphone", "to": "matter", "width": 2}, {"arrows": "to", "from": "iphone", "to": "matter", "width": 2}, {"arrows": "to", "from": "iphone", "to": "compare", "width": 2}, {"arrows": "to", "from": "iphone", "to": "compare", "width": 2}, {"arrows": "to", "from": "iphone", "to": "compare", "width": 2}, {"arrows": "to", "from": "iphone", "to": "compare", "width": 2}, {"arrows": "to", "from": "iphone", "to": "compare", "width": 2}, {"arrows": "to", "from": "iphone", "to": "compare", "width": 2}, {"arrows": "to", "from": "iphone", "to": "compare", "width": 2}, {"arrows": "to", "from": "iphone", "to": "compare", "width": 2}, {"arrows": "to", "from": "iphone", "to": "compare", "width": 2}, {"arrows": "to", "from": "iphone", "to": "compare", "width": 2}, {"arrows": "to", "from": "iphone", "to": "compare", "width": 2}, {"arrows": "to", "from": "catalyst", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "catalyst", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "catalyst", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "catalyst", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "catalyst", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "catalyst", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "catalyst", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "catalyst", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "catalyst", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "catalyst", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "catalyst", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "catalyst", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "world", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "world", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "world", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "world", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "world", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "world", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "world", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "world", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "world", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "world", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "world", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "world", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "know", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "know", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "know", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "know", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "know", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "know", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "know", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "know", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "know", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "know", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "know", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "know", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "go", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "go", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "go", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "go", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "go", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "go", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "go", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "go", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "go", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "go", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "go", "width": 2}, {"arrows": "to", "from": "@ailsaforshaw", "to": "go", "width": 2}, {"arrows": "to", "from": "time", "to": "compare", "width": 2}, {"arrows": "to", "from": "time", "to": "compare", "width": 2}, {"arrows": "to", "from": "time", "to": "compare", "width": 2}, {"arrows": "to", "from": "time", "to": "compare", "width": 2}, {"arrows": "to", "from": "time", "to": "compare", "width": 2}, {"arrows": "to", "from": "time", "to": "compare", "width": 2}, {"arrows": "to", "from": "time", "to": "compare", "width": 2}, {"arrows": "to", "from": "time", "to": "compare", "width": 2}, {"arrows": "to", "from": "time", "to": "compare", "width": 2}, {"arrows": "to", "from": "time", "to": "compare", "width": 2}, {"arrows": "to", "from": "time", "to": "compare", "width": 2}, {"arrows": "to", "from": "time", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "time", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "time", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "time", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "time", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "time", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "time", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "time", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "time", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "time", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "time", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "time", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "time", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "time", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "time", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "time", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "time", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "time", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "time", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "time", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "time", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "time", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "compare", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "compare", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "compare", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "compare", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "compare", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "compare", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "compare", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "compare", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "compare", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "compare", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "compare", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "compare", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "compare", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "compare", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "compare", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "compare", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "compare", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "compare", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "compare", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "compare", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "compare", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "compare", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "matter", "to": "time", "width": 2}, {"arrows": "to", "from": "matter", "to": "time", "width": 2}, {"arrows": "to", "from": "matter", "to": "time", "width": 2}, {"arrows": "to", "from": "matter", "to": "time", "width": 2}, {"arrows": "to", "from": "matter", "to": "time", "width": 2}, {"arrows": "to", "from": "matter", "to": "time", "width": 2}, {"arrows": "to", "from": "matter", "to": "time", "width": 2}, {"arrows": "to", "from": "matter", "to": "time", "width": 2}, {"arrows": "to", "from": "matter", "to": "time", "width": 2}, {"arrows": "to", "from": "matter", "to": "time", "width": 2}, {"arrows": "to", "from": "matter", "to": "time", "width": 2}, {"arrows": "to", "from": "matter", "to": "compare", "width": 2}, {"arrows": "to", "from": "matter", "to": "compare", "width": 2}, {"arrows": "to", "from": "matter", "to": "compare", "width": 2}, {"arrows": "to", "from": "matter", "to": "compare", "width": 2}, {"arrows": "to", "from": "matter", "to": "compare", "width": 2}, {"arrows": "to", "from": "matter", "to": "compare", "width": 2}, {"arrows": "to", "from": "matter", "to": "compare", "width": 2}, {"arrows": "to", "from": "matter", "to": "compare", "width": 2}, {"arrows": "to", "from": "matter", "to": "compare", "width": 2}, {"arrows": "to", "from": "matter", "to": "compare", "width": 2}, {"arrows": "to", "from": "matter", "to": "compare", "width": 2}, {"arrows": "to", "from": "matter", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "matter", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "matter", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "matter", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "matter", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "matter", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "matter", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "matter", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "matter", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "matter", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "matter", "to": "catalyst", "width": 2}, {"arrows": "to", "from": "matter", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "matter", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "matter", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "matter", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "matter", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "matter", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "matter", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "matter", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "matter", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "matter", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "matter", "to": "#phonecase", "width": 2}, {"arrows": "to", "from": "#bigsouth90", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "#bigsouth90", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "#bigsouth90", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "#bigsouth90", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "#bigsouth90", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "#bigsouth90", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "#bigsouth90", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "#bigsouth90", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "#bigsouth90", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "#bigsouth90", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "#bigsouth90", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "\u2019", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "\u2019", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "\u2019", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "\u2019", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "life", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "life", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "life", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "life", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "collab", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "collab", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "collab", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "collab", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "@adidas", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "in-store", "to": "online", "width": 2}, {"arrows": "to", "from": "in-store", "to": "online", "width": 2}, {"arrows": "to", "from": "in-store", "to": "online", "width": 2}, {"arrows": "to", "from": "in-store", "to": "online", "width": 2}, {"arrows": "to", "from": "in-store", "to": "online", "width": 2}, {"arrows": "to", "from": "in-store", "to": "online", "width": 2}, {"arrows": "to", "from": "in-store", "to": "online", "width": 2}, {"arrows": "to", "from": "in-store", "to": "online", "width": 2}, {"arrows": "to", "from": "in-store", "to": "online", "width": 2}, {"arrows": "to", "from": "online", "to": "visit", "width": 2}, {"arrows": "to", "from": "online", "to": "visit", "width": 2}, {"arrows": "to", "from": "online", "to": "visit", "width": 2}, {"arrows": "to", "from": "online", "to": "visit", "width": 2}, {"arrows": "to", "from": "online", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "online", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "online", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "online", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "visit", "to": "purchase", "width": 2}, {"arrows": "to", "from": "visit", "to": "purchase", "width": 2}, {"arrows": "to", "from": "visit", "to": "purchase", "width": 2}, {"arrows": "to", "from": "visit", "to": "purchase", "width": 2}, {"arrows": "to", "from": "visit", "to": "purchase", "width": 2}, {"arrows": "to", "from": "visit", "to": "purchase", "width": 2}, {"arrows": "to", "from": "visit", "to": "purchase", "width": 2}, {"arrows": "to", "from": "visit", "to": "purchase", "width": 2}, {"arrows": "to", "from": "visit", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "visit", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "visit", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "visit", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "visit", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "visit", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "visit", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "visit", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "purchase", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "purchase", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "purchase", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "purchase", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "purchase", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "purchase", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "forum", "to": "tech", "width": 2}, {"arrows": "to", "from": "forum", "to": "tech", "width": 2}, {"arrows": "to", "from": "forum", "to": "tech", "width": 2}, {"arrows": "to", "from": "forum", "to": "tech", "width": 2}, {"arrows": "to", "from": "forum", "to": "tech", "width": 2}, {"arrows": "to", "from": "forum", "to": "tech", "width": 2}, {"arrows": "to", "from": "forum", "to": "tech", "width": 2}, {"arrows": "to", "from": "tech", "to": "#xbox20", "width": 2}, {"arrows": "to", "from": "tech", "to": "#xbox20", "width": 2}, {"arrows": "to", "from": "tech", "to": "#xbox20", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "vote", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "vote", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "vote", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "vote", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "vote", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "vote", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "carbon", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "carbon", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "carbon", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "carbon", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "carbon", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "carbon", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "we\u0027ve", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "vote", "to": "carbon", "width": 2}, {"arrows": "to", "from": "vote", "to": "carbon", "width": 2}, {"arrows": "to", "from": "vote", "to": "carbon", "width": 2}, {"arrows": "to", "from": "vote", "to": "carbon", "width": 2}, {"arrows": "to", "from": "vote", "to": "carbon", "width": 2}, {"arrows": "to", "from": "vote", "to": "carbon", "width": 2}, {"arrows": "to", "from": "@3dprintindustry", "to": "vote", "width": 2}, {"arrows": "to", "from": "@3dprintindustry", "to": "vote", "width": 2}, {"arrows": "to", "from": "@3dprintindustry", "to": "vote", "width": 2}, {"arrows": "to", "from": "@3dprintindustry", "to": "vote", "width": 2}, {"arrows": "to", "from": "@3dprintindustry", "to": "vote", "width": 2}, {"arrows": "to", "from": "@3dprintindustry", "to": "vote", "width": 2}, {"arrows": "to", "from": "@3dprintindustry", "to": "carbon", "width": 2}, {"arrows": "to", "from": "@3dprintindustry", "to": "carbon", "width": 2}, {"arrows": "to", "from": "@3dprintindustry", "to": "carbon", "width": 2}, {"arrows": "to", "from": "@3dprintindustry", "to": "carbon", "width": 2}, {"arrows": "to", "from": "@3dprintindustry", "to": "carbon", "width": 2}, {"arrows": "to", "from": "@3dprintindustry", "to": "carbon", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "vote", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "vote", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "vote", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "vote", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "vote", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "vote", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "share", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "share", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "share", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "share", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "share", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "share", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "carbon", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "carbon", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "carbon", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "carbon", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "carbon", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "carbon", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "we\u0027re", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "share", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "share", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "share", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "share", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "share", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "share", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "share", "to": "vote", "width": 2}, {"arrows": "to", "from": "share", "to": "vote", "width": 2}, {"arrows": "to", "from": "share", "to": "vote", "width": 2}, {"arrows": "to", "from": "share", "to": "vote", "width": 2}, {"arrows": "to", "from": "share", "to": "vote", "width": 2}, {"arrows": "to", "from": "share", "to": "vote", "width": 2}, {"arrows": "to", "from": "share", "to": "carbon", "width": 2}, {"arrows": "to", "from": "share", "to": "carbon", "width": 2}, {"arrows": "to", "from": "share", "to": "carbon", "width": 2}, {"arrows": "to", "from": "share", "to": "carbon", "width": 2}, {"arrows": "to", "from": "share", "to": "carbon", "width": 2}, {"arrows": "to", "from": "share", "to": "carbon", "width": 2}, {"arrows": "to", "from": "share", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "share", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "share", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "share", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "share", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "share", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "store", "to": "visit", "width": 2}, {"arrows": "to", "from": "store", "to": "visit", "width": 2}, {"arrows": "to", "from": "store", "to": "visit", "width": 2}, {"arrows": "to", "from": "store", "to": "visit", "width": 2}, {"arrows": "to", "from": "store", "to": "visit", "width": 2}, {"arrows": "to", "from": "store", "to": "visit", "width": 2}, {"arrows": "to", "from": "store", "to": "purchase", "width": 2}, {"arrows": "to", "from": "store", "to": "purchase", "width": 2}, {"arrows": "to", "from": "store", "to": "purchase", "width": 2}, {"arrows": "to", "from": "store", "to": "purchase", "width": 2}, {"arrows": "to", "from": "store", "to": "purchase", "width": 2}, {"arrows": "to", "from": "store", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "store", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "store", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "store", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "store", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "shop", "to": "visit", "width": 2}, {"arrows": "to", "from": "shop", "to": "visit", "width": 2}, {"arrows": "to", "from": "shop", "to": "visit", "width": 2}, {"arrows": "to", "from": "shop", "to": "visit", "width": 2}, {"arrows": "to", "from": "shop", "to": "visit", "width": 2}, {"arrows": "to", "from": "shop", "to": "visit", "width": 2}, {"arrows": "to", "from": "shop", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "shop", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "shop", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "shop", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "shop", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "shop", "to": "#snipesusa", "width": 2}, {"arrows": "to", "from": "shop", "to": "purchase", "width": 2}, {"arrows": "to", "from": "shop", "to": "purchase", "width": 2}, {"arrows": "to", "from": "shop", "to": "purchase", "width": 2}, {"arrows": "to", "from": "shop", "to": "purchase", "width": 2}, {"arrows": "to", "from": "shop", "to": "purchase", "width": 2}, {"arrows": "to", "from": "shop", "to": "\ud83d\udcf2", "width": 2}, {"arrows": "to", "from": "shop", "to": "\ud83d\udcf2", "width": 2}, {"arrows": "to", "from": "shop", "to": "\ud83d\udcf2", "width": 2}, {"arrows": "to", "from": "shop", "to": "\ud83d\udcf2", "width": 2}, {"arrows": "to", "from": "shop", "to": "store", "width": 2}, {"arrows": "to", "from": "shop", "to": "store", "width": 2}, {"arrows": "to", "from": "shop", "to": "store", "width": 2}, {"arrows": "to", "from": "shop", "to": "store", "width": 2}, {"arrows": "to", "from": "shop", "to": "online", "width": 2}, {"arrows": "to", "from": "shop", "to": "online", "width": 2}, {"arrows": "to", "from": "shop", "to": "online", "width": 2}, {"arrows": "to", "from": "shop", "to": "online", "width": 2}, {"arrows": "to", "from": "pair", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "pair", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "pair", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "pair", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "pair", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "pair", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "@solesavy", "to": "yeezy", "width": 2}, {"arrows": "to", "from": "@solesavy", "to": "yeezy", "width": 2}, {"arrows": "to", "from": "@solesavy", "to": "yeezy", "width": 2}, {"arrows": "to", "from": "@solesavy", "to": "yeezy", "width": 2}, {"arrows": "to", "from": "@solesavy", "to": "yeezy", "width": 2}, {"arrows": "to", "from": "@solesavy", "to": "yeezy", "width": 2}, {"arrows": "to", "from": "@solesavy", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "@solesavy", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "@solesavy", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "@solesavy", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "@solesavy", "to": "\"", "width": 2}, {"arrows": "to", "from": "@solesavy", "to": "\"", "width": 2}, {"arrows": "to", "from": "@solesavy", "to": "\"", "width": 2}, {"arrows": "to", "from": "@solesavy", "to": "\"", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "\"", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "\"", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "\"", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "\"", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "\"", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "knit", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "knit", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "knit", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "knit", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "/", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "/", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "/", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "/", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "tint", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "tint", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "tint", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "orange", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "orange", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "orange", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "mx", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "mx", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "mx", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "blue", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "blue", "width": 2}, {"arrows": "to", "from": "yeezy", "to": "blue", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "we\u0027re", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "we\u0027re", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "we\u0027re", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "we\u0027re", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "we\u0027re", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "we\u0027re", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "vote", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "vote", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "vote", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "vote", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "vote", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "vote", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "share", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "share", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "share", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "share", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "share", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "share", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "carbon", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "carbon", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "carbon", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "carbon", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "carbon", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "carbon", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "@hayabusacombat", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "%", "to": "shop", "width": 2}, {"arrows": "to", "from": "%", "to": "shop", "width": 2}, {"arrows": "to", "from": "%", "to": "shop", "width": 2}, {"arrows": "to", "from": "%", "to": "shop", "width": 2}, {"arrows": "to", "from": "%", "to": "shop", "width": 2}, {"arrows": "to", "from": "%", "to": "shop", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "season", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "season", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "season", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "season", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "season", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "smh", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "smh", "width": 2}, {"arrows": "to", "from": "\u2019", "to": "smh", "width": 2}, {"arrows": "to", "from": "year", "to": "we\u0027re", "width": 2}, {"arrows": "to", "from": "year", "to": "we\u0027re", "width": 2}, {"arrows": "to", "from": "year", "to": "we\u0027re", "width": 2}, {"arrows": "to", "from": "year", "to": "we\u0027re", "width": 2}, {"arrows": "to", "from": "year", "to": "we\u0027re", "width": 2}, {"arrows": "to", "from": "year", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "year", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "year", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "year", "to": "we\u0027ve", "width": 2}, {"arrows": "to", "from": "year", "to": "vote", "width": 2}, {"arrows": "to", "from": "year", "to": "vote", "width": 2}, {"arrows": "to", "from": "year", "to": "vote", "width": 2}, {"arrows": "to", "from": "year", "to": "vote", "width": 2}, {"arrows": "to", "from": "year", "to": "share", "width": 2}, {"arrows": "to", "from": "year", "to": "share", "width": 2}, {"arrows": "to", "from": "year", "to": "share", "width": 2}, {"arrows": "to", "from": "year", "to": "share", "width": 2}, {"arrows": "to", "from": "year", "to": "carbon", "width": 2}, {"arrows": "to", "from": "year", "to": "carbon", "width": 2}, {"arrows": "to", "from": "year", "to": "carbon", "width": 2}, {"arrows": "to", "from": "year", "to": "carbon", "width": 2}, {"arrows": "to", "from": "year", "to": "@hayabusacombat", "width": 2}, {"arrows": "to", "from": "year", "to": "@hayabusacombat", "width": 2}, {"arrows": "to", "from": "year", "to": "@hayabusacombat", "width": 2}, {"arrows": "to", "from": "year", "to": "@hayabusacombat", "width": 2}, {"arrows": "to", "from": "year", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "year", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "year", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "year", "to": "@3dprintindustry", "width": 2}, {"arrows": "to", "from": "week\u0027s", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "week\u0027s", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "week\u0027s", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "week\u0027s", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "week\u0027s", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "week\u0027s", "to": "#bigsouth90", "width": 2}, {"arrows": "to", "from": "week\u0027s", "to": "#bigsouth90", "width": 2}, {"arrows": "to", "from": "week\u0027s", "to": "#bigsouth90", "width": 2}, {"arrows": "to", "from": "week\u0027s", "to": "#bigsouth90", "width": 2}, {"arrows": "to", "from": "week\u0027s", "to": "#bigsouth90", "width": 2}, {"arrows": "to", "from": "@beyonce", "to": "\ufe0f", "width": 2}, {"arrows": "to", "from": "@beyonce", "to": "\ufe0f", "width": 2}, {"arrows": "to", "from": "@beyonce", "to": "\ufe0f", "width": 2}, {"arrows": "to", "from": "@beyonce", "to": "\ufe0f", "width": 2}, {"arrows": "to", "from": "@beyonce", "to": "\ufe0f", "width": 2}, {"arrows": "to", "from": "\u2060", "to": "shop", "width": 2}, {"arrows": "to", "from": "\u2060", "to": "shop", "width": 2}, {"arrows": "to", "from": "\u2060", "to": "shop", "width": 2}, {"arrows": "to", "from": "\u2060", "to": "shop", "width": 2}, {"arrows": "to", "from": "\u2060", "to": "holiday", "width": 2}, {"arrows": "to", "from": "\u2060", "to": "holiday", "width": 2}, {"arrows": "to", "from": "\u2060", "to": "holiday", "width": 2}, {"arrows": "to", "from": "\u2060", "to": "guide", "width": 2}, {"arrows": "to", "from": "\u2060", "to": "guide", "width": 2}, {"arrows": "to", "from": "\u2060", "to": "guide", "width": 2}, {"arrows": "to", "from": "\u2060", "to": "gift", "width": 2}, {"arrows": "to", "from": "\u2060", "to": "gift", "width": 2}, {"arrows": "to", "from": "\u2060", "to": "gift", "width": 2}, {"arrows": "to", "from": "wotherspoon", "to": "earth", "width": 2}, {"arrows": "to", "from": "wotherspoon", "to": "earth", "width": 2}, {"arrows": "to", "from": "wotherspoon", "to": "earth", "width": 2}, {"arrows": "to", "from": "wotherspoon", "to": "earth", "width": 2}, {"arrows": "to", "from": "wotherspoon", "to": "superstar", "width": 2}, {"arrows": "to", "from": "wotherspoon", "to": "superstar", "width": 2}, {"arrows": "to", "from": "wotherspoon", "to": "superstar", "width": 2}, {"arrows": "to", "from": "wotherspoon", "to": "atl", "width": 2}, {"arrows": "to", "from": "wotherspoon", "to": "atl", "width": 2}, {"arrows": "to", "from": "wotherspoon", "to": "atl", "width": 2}, {"arrows": "to", "from": "track", "to": "skirt", "width": 2}, {"arrows": "to", "from": "track", "to": "skirt", "width": 2}, {"arrows": "to", "from": "track", "to": "skirt", "width": 2}, {"arrows": "to", "from": "track", "to": "skirt", "width": 2}, {"arrows": "to", "from": "track", "to": "pant", "width": 2}, {"arrows": "to", "from": "track", "to": "pant", "width": 2}, {"arrows": "to", "from": "track", "to": "pant", "width": 2}, {"arrows": "to", "from": "track", "to": "pant", "width": 2}, {"arrows": "to", "from": "take", "to": "%", "width": 2}, {"arrows": "to", "from": "take", "to": "%", "width": 2}, {"arrows": "to", "from": "take", "to": "%", "width": 2}, {"arrows": "to", "from": "take", "to": "%", "width": 2}, {"arrows": "to", "from": "super", "to": "#pixelvault", "width": 2}, {"arrows": "to", "from": "super", "to": "#pixelvault", "width": 2}, {"arrows": "to", "from": "super", "to": "#pixelvault", "width": 2}, {"arrows": "to", "from": "super", "to": "#pixelvault", "width": 2}, {"arrows": "to", "from": "style", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "style", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "style", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "style", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "street", "to": "fighter", "width": 2}, {"arrows": "to", "from": "street", "to": "fighter", "width": 2}, {"arrows": "to", "from": "street", "to": "fighter", "width": 2}, {"arrows": "to", "from": "street", "to": "fighter", "width": 2}, {"arrows": "to", "from": "street", "to": "block", "width": 2}, {"arrows": "to", "from": "street", "to": "block", "width": 2}, {"arrows": "to", "from": "street", "to": "block", "width": 2}, {"arrows": "to", "from": "street", "to": "block", "width": 2}, {"arrows": "to", "from": "steph", "to": "season", "width": 2}, {"arrows": "to", "from": "steph", "to": "season", "width": 2}, {"arrows": "to", "from": "steph", "to": "season", "width": 2}, {"arrows": "to", "from": "steph", "to": "season", "width": 2}, {"arrows": "to", "from": "scott", "to": "track", "width": 2}, {"arrows": "to", "from": "scott", "to": "track", "width": 2}, {"arrows": "to", "from": "scott", "to": "track", "width": 2}, {"arrows": "to", "from": "scott", "to": "track", "width": 2}, {"arrows": "to", "from": "rookie", "to": "season", "width": 2}, {"arrows": "to", "from": "rookie", "to": "season", "width": 2}, {"arrows": "to", "from": "rookie", "to": "season", "width": 2}, {"arrows": "to", "from": "rookie", "to": "season", "width": 2}, {"arrows": "to", "from": "park", "to": "@ivypark", "width": 2}, {"arrows": "to", "from": "park", "to": "@ivypark", "width": 2}, {"arrows": "to", "from": "park", "to": "@ivypark", "width": 2}, {"arrows": "to", "from": "park", "to": "@ivypark", "width": 2}, {"arrows": "to", "from": "para", "to": "los", "width": 2}, {"arrows": "to", "from": "para", "to": "los", "width": 2}, {"arrows": "to", "from": "para", "to": "los", "width": 2}, {"arrows": "to", "from": "para", "to": "los", "width": 2}, {"arrows": "to", "from": "los", "to": "pst", "width": 2}, {"arrows": "to", "from": "los", "to": "pst", "width": 2}, {"arrows": "to", "from": "los", "to": "pst", "width": 2}, {"arrows": "to", "from": "los", "to": "pst", "width": 2}, {"arrows": "to", "from": "life", "to": "collab", "width": 2}, {"arrows": "to", "from": "life", "to": "collab", "width": 2}, {"arrows": "to", "from": "life", "to": "collab", "width": 2}, {"arrows": "to", "from": "life", "to": "collab", "width": 2}, {"arrows": "to", "from": "life", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "life", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "life", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "life", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "collab", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "collab", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "collab", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "collab", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "land", "to": "\u2019", "width": 2}, {"arrows": "to", "from": "land", "to": "\u2019", "width": 2}, {"arrows": "to", "from": "land", "to": "\u2019", "width": 2}, {"arrows": "to", "from": "land", "to": "\u2019", "width": 2}, {"arrows": "to", "from": "jeremy", "to": "track", "width": 2}, {"arrows": "to", "from": "jeremy", "to": "track", "width": 2}, {"arrows": "to", "from": "jeremy", "to": "track", "width": 2}, {"arrows": "to", "from": "jeremy", "to": "track", "width": 2}, {"arrows": "to", "from": "hoodie", "to": "track", "width": 2}, {"arrows": "to", "from": "hoodie", "to": "track", "width": 2}, {"arrows": "to", "from": "hoodie", "to": "track", "width": 2}, {"arrows": "to", "from": "hoodie", "to": "track", "width": 2}, {"arrows": "to", "from": "giant", "to": "life", "width": 2}, {"arrows": "to", "from": "giant", "to": "life", "width": 2}, {"arrows": "to", "from": "giant", "to": "life", "width": 2}, {"arrows": "to", "from": "giant", "to": "life", "width": 2}, {"arrows": "to", "from": "giant", "to": "collab", "width": 2}, {"arrows": "to", "from": "giant", "to": "collab", "width": 2}, {"arrows": "to", "from": "giant", "to": "collab", "width": 2}, {"arrows": "to", "from": "giant", "to": "collab", "width": 2}, {"arrows": "to", "from": "giant", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "giant", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "giant", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "giant", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "giant", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "giant", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "giant", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "giant", "to": "#complexcon", "width": 2}, {"arrows": "to", "from": "get", "to": "la", "width": 2}, {"arrows": "to", "from": "get", "to": "la", "width": 2}, {"arrows": "to", "from": "get", "to": "la", "width": 2}, {"arrows": "to", "from": "get", "to": "la", "width": 2}, {"arrows": "to", "from": "game", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "game", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "game", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "game", "to": "\u2026", "width": 2}, {"arrows": "to", "from": "family", "to": "visit", "width": 2}, {"arrows": "to", "from": "family", "to": "visit", "width": 2}, {"arrows": "to", "from": "family", "to": "visit", "width": 2}, {"arrows": "to", "from": "family", "to": "visit", "width": 2}, {"arrows": "to", "from": "family", "to": "purchase", "width": 2}, {"arrows": "to", "from": "family", "to": "purchase", "width": 2}, {"arrows": "to", "from": "family", "to": "purchase", "width": 2}, {"arrows": "to", "from": "family", "to": "purchase", "width": 2}, {"arrows": "to", "from": "def", "to": "trae", "width": 2}, {"arrows": "to", "from": "def", "to": "trae", "width": 2}, {"arrows": "to", "from": "def", "to": "trae", "width": 2}, {"arrows": "to", "from": "def", "to": "trae", "width": 2}, {"arrows": "to", "from": "collection", "to": "track", "width": 2}, {"arrows": "to", "from": "collection", "to": "track", "width": 2}, {"arrows": "to", "from": "collection", "to": "track", "width": 2}, {"arrows": "to", "from": "collection", "to": "track", "width": 2}, {"arrows": "to", "from": "collection", "to": "street", "width": 2}, {"arrows": "to", "from": "collection", "to": "street", "width": 2}, {"arrows": "to", "from": "collection", "to": "street", "width": 2}, {"arrows": "to", "from": "collection", "to": "street", "width": 2}, {"arrows": "to", "from": "collection", "to": "fighter", "width": 2}, {"arrows": "to", "from": "collection", "to": "fighter", "width": 2}, {"arrows": "to", "from": "collection", "to": "fighter", "width": 2}, {"arrows": "to", "from": "collection", "to": "fighter", "width": 2}, {"arrows": "to", "from": "collection", "to": "bait", "width": 2}, {"arrows": "to", "from": "collection", "to": "bait", "width": 2}, {"arrows": "to", "from": "collection", "to": "bait", "width": 2}, {"arrows": "to", "from": "collection", "to": "bait", "width": 2}, {"arrows": "to", "from": "bait", "to": "street", "width": 2}, {"arrows": "to", "from": "bait", "to": "street", "width": 2}, {"arrows": "to", "from": "bait", "to": "street", "width": 2}, {"arrows": "to", "from": "bait", "to": "street", "width": 2}, {"arrows": "to", "from": "bait", "to": "fighter", "width": 2}, {"arrows": "to", "from": "bait", "to": "fighter", "width": 2}, {"arrows": "to", "from": "bait", "to": "fighter", "width": 2}, {"arrows": "to", "from": "bait", "to": "fighter", "width": 2}, {"arrows": "to", "from": "check", "to": "street", "width": 2}, {"arrows": "to", "from": "check", "to": "street", "width": 2}, {"arrows": "to", "from": "check", "to": "street", "width": 2}, {"arrows": "to", "from": "check", "to": "street", "width": 2}, {"arrows": "to", "from": "check", "to": "fighter", "width": 2}, {"arrows": "to", "from": "check", "to": "fighter", "width": 2}, {"arrows": "to", "from": "check", "to": "fighter", "width": 2}, {"arrows": "to", "from": "check", "to": "fighter", "width": 2}, {"arrows": "to", "from": "check", "to": "collection", "width": 2}, {"arrows": "to", "from": "check", "to": "collection", "width": 2}, {"arrows": "to", "from": "check", "to": "collection", "width": 2}, {"arrows": "to", "from": "check", "to": "collection", "width": 2}, {"arrows": "to", "from": "check", "to": "bait", "width": 2}, {"arrows": "to", "from": "check", "to": "bait", "width": 2}, {"arrows": "to", "from": "check", "to": "bait", "width": 2}, {"arrows": "to", "from": "check", "to": "bait", "width": 2}, {"arrows": "to", "from": "break", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "break", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "break", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "break", "to": "@adidas", "width": 2}, {"arrows": "to", "from": "basketball", "to": "court", "width": 2}, {"arrows": "to", "from": "basketball", "to": "court", "width": 2}, {"arrows": "to", "from": "basketball", "to": "court", "width": 2}, {"arrows": "to", "from": "basketball", "to": "court", "width": 2}, {"arrows": "to", "from": "acquisition", "to": "\"", "width": 2}, {"arrows": "to", "from": "acquisition", "to": "\"", "width": 2}, {"arrows": "to", "from": "acquisition", "to": "\"", "width": 2}, {"arrows": "to", "from": "acquisition", "to": "\"", "width": 2}, {"arrows": "to", "from": "@xbox", "to": "lol", "width": 2}, {"arrows": "to", "from": "@xbox", "to": "lol", "width": 2}, {"arrows": "to", "from": "@xbox", "to": "lol", "width": 2}, {"arrows": "to", "from": "@xbox", "to": "lol", "width": 2}, {"arrows": "to", "from": "@goodgamebro", "to": "@xbox", "width": 2}, {"arrows": "to", "from": "@goodgamebro", "to": "@xbox", "width": 2}, {"arrows": "to", "from": "@goodgamebro", "to": "@xbox", "width": 2}, {"arrows": "to", "from": "@goodgamebro", "to": "@xbox", "width": 2}, {"arrows": "to", "from": "xbox", "to": "kit", "width": 2}, {"arrows": "to", "from": "xbox", "to": "kit", "width": 2}, {"arrows": "to", "from": "xbox", "to": "kit", "width": 2}, {"arrows": "to", "from": "xbox", "to": "follow", "width": 2}, {"arrows": "to", "from": "xbox", "to": "follow", "width": 2}, {"arrows": "to", "from": "xbox", "to": "follow", "width": 2}, {"arrows": "to", "from": "xbox", "to": "chance", "width": 2}, {"arrows": "to", "from": "xbox", "to": "chance", "width": 2}, {"arrows": "to", "from": "xbox", "to": "chance", "width": 2}, {"arrows": "to", "from": "xbox", "to": "#xboxsweepstakes", "width": 2}, {"arrows": "to", "from": "xbox", "to": "#xboxsweepstakes", "width": 2}, {"arrows": "to", "from": "xbox", "to": "#xboxsweepstakes", "width": 2}, {"arrows": "to", "from": "watch", "to": "app", "width": 2}, {"arrows": "to", "from": "watch", "to": "app", "width": 2}, {"arrows": "to", "from": "watch", "to": "app", "width": 2}, {"arrows": "to", "from": "wash", "to": "orange", "width": 2}, {"arrows": "to", "from": "wash", "to": "orange", "width": 2}, {"arrows": "to", "from": "wash", "to": "orange", "width": 2}, {"arrows": "to", "from": "tree", "to": "\ud83c\udf51", "width": 2}, {"arrows": "to", "from": "tree", "to": "\ud83c\udf51", "width": 2}, {"arrows": "to", "from": "tree", "to": "\ud83c\udf51", "width": 2}, {"arrows": "to", "from": "tree", "to": "colorway", "width": 2}, {"arrows": "to", "from": "tree", "to": "colorway", "width": 2}, {"arrows": "to", "from": "tree", "to": "colorway", "width": 2}, {"arrows": "to", "from": "tomorrow", "to": "morning", "width": 2}, {"arrows": "to", "from": "tomorrow", "to": "morning", "width": 2}, {"arrows": "to", "from": "tomorrow", "to": "morning", "width": 2}, {"arrows": "to", "from": "sustainability", "to": "award", "width": 2}, {"arrows": "to", "from": "sustainability", "to": "award", "width": 2}, {"arrows": "to", "from": "sustainability", "to": "award", "width": 2}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "physics",
+            "nodes"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
